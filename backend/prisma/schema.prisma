@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  role         Role     @default(SALES_EXEC)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  leads        Lead[]   @relation("AssignedLeads")
+  createdLeads Lead[]   @relation("CreatedLeads")
+  tasks        Task[]
+  notifications Notification[]
+  activityLogs ActivityLog[]
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  SALES_EXEC
+}
+
+model Lead {
+  id          String     @id @default(uuid())
+  name        String
+  email       String
+  phone       String?
+  company     String?
+  budget      String?
+  source      String     @default("WEBSITE")
+  status      LeadStatus @default(NEW)
+  score       Int        @default(0)
+  assignedTo  User?      @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  assignedToId String?
+  createdBy   User       @relation("CreatedLeads", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  customer    Customer?
+  tasks       Task[]
+  meetings    Meeting[]
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  MEETING
+  PROPOSAL
+  WON
+  LOST
+}
+
+model Customer {
+  id          String   @id @default(uuid())
+  lead        Lead     @relation(fields: [leadId], references: [id])
+  leadId      String   @unique
+  companyName String
+  projectName String?
+  totalValue  Float    @default(0)
+  healthScore Int      @default(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  payments    Payment[]
+  files       File[]
+  meetings    Meeting[]
+  invoices    Invoice[]
+}
+
+model Payment {
+  id         String        @id @default(uuid())
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  customerId String
+  amount     Float
+  status     PaymentStatus @default(PENDING)
+  dueDate    DateTime?
+  paidAt     DateTime?
+  createdAt  DateTime      @default(now())
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  OVERDUE
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  assignedTo  User       @relation(fields: [assignedToId], references: [id])
+  assignedToId String
+  lead        Lead?      @relation(fields: [leadId], references: [id])
+  leadId      String?
+  priority    Priority   @default(MEDIUM)
+  status      TaskStatus @default(PENDING)
+  dueDate     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+model Meeting {
+  id         String        @id @default(uuid())
+  title      String
+  lead       Lead?         @relation(fields: [leadId], references: [id])
+  leadId     String?
+  customer   Customer?     @relation(fields: [customerId], references: [id])
+  customerId String?
+  scheduledAt DateTime
+  notes      String?
+  status     MeetingStatus @default(SCHEDULED)
+  createdAt  DateTime      @default(now())
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model File {
+  id         String   @id @default(uuid())
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String
+  filename   String
+  fileUrl    String
+  fileType   String?
+  createdAt  DateTime @default(now())
+}
+
+model Invoice {
+  id         String   @id @default(uuid())
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String
+  amount     Float
+  gst        Float    @default(0)
+  total      Float
+  createdAt  DateTime @default(now())
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+}
