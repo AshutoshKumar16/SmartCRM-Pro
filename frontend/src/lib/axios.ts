@@ -11,4 +11,27 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Auto refresh token on 401
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const original = error.config
+    if (error.response?.status === 401 && !original._retry) {
+      original._retry = true
+      try {
+        const res = await axios.post('http://localhost:5000/api/auth/refresh', {}, { withCredentials: true })
+        const newToken = res.data.accessToken
+        localStorage.setItem('accessToken', newToken)
+        original.headers.Authorization = `Bearer ${newToken}`
+        return api(original)
+      } catch {
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 export default api

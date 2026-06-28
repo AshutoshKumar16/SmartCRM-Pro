@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Leads from './Leads'
 import Pipeline from './Pipeline'
 import Analytics from './Analytics'
+import Customers from './Customers'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -207,6 +208,7 @@ export default function Dashboard() {
           {activeNav === 'Leads' && <Leads dark={d} />}
 {activeNav === 'Pipeline' && <Pipeline dark={d} />}
 {activeNav === 'Reports' && <Analytics dark={d} />}
+{activeNav === 'Customers' && <Customers dark={d} />}
         </div>
       </div>
     </div>

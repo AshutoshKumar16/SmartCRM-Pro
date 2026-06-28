@@ -32,6 +32,9 @@ export default function Leads({ dark }: { dark: boolean }) {
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', budget: '', source: 'MANUAL' })
   const [submitting, setSubmitting] = useState(false)
+  const [convertModal, setConvertModal] = useState<Lead | null>(null)
+  const [convertForm, setConvertForm] = useState({ companyName: '', projectName: '', totalValue: '' })
+  const [converting, setConverting] = useState(false)
 
   const fetchLeads = async () => {
     try {
@@ -67,6 +70,26 @@ export default function Leads({ dark }: { dark: boolean }) {
     fetchLeads()
   }
 
+  const handleConvert = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!convertModal) return
+    setConverting(true)
+    try {
+      await api.post('/customers/convert', {
+        leadId: convertModal.id,
+        companyName: convertForm.companyName,
+        projectName: convertForm.projectName,
+        totalValue: parseFloat(convertForm.totalValue) || 0
+      })
+      setConvertModal(null)
+      fetchLeads()
+    } catch {
+      console.error('Failed to convert')
+    } finally {
+      setConverting(false)
+    }
+  }
+
   const handleStatusChange = async (id: string, status: string) => {
     await api.patch(`/leads/${id}/status`, { status })
     fetchLeads()
@@ -84,7 +107,6 @@ export default function Leads({ dark }: { dark: boolean }) {
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className={`text-2xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Leads</h1>
@@ -98,7 +120,6 @@ export default function Leads({ dark }: { dark: boolean }) {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <input
           type="text"
@@ -122,7 +143,6 @@ export default function Leads({ dark }: { dark: boolean }) {
         ))}
       </div>
 
-      {/* Table */}
       <div className={`rounded-2xl border overflow-hidden shadow-sm ${d ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
         {loading ? (
           <div className="py-20 text-center text-gray-400 text-sm">Loading...</div>
@@ -168,12 +188,25 @@ export default function Leads({ dark }: { dark: boolean }) {
                     {lead.assignedTo?.name || <span className="text-gray-400">Unassigned</span>}
                   </td>
                   <td className="px-6 py-4">
-                    <button
-                      onClick={() => handleDelete(lead.id)}
-                      className="text-xs text-red-400 hover:text-red-600 font-medium transition"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {lead.status !== 'WON' && (
+                        <button
+                          onClick={() => {
+                            setConvertModal(lead)
+                            setConvertForm({ companyName: lead.company || '', projectName: '', totalValue: '' })
+                          }}
+                          className="text-xs text-green-500 hover:text-green-600 font-medium transition"
+                        >
+                          Convert
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete(lead.id)}
+                        className="text-xs text-red-400 hover:text-red-600 font-medium transition"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -216,6 +249,48 @@ export default function Leads({ dark }: { dark: boolean }) {
                 </button>
                 <button type="submit" disabled={submitting} className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
                   {submitting ? 'Adding...' : 'Add lead'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Convert Modal */}
+      {convertModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-md rounded-2xl p-6 shadow-xl ${d ? 'bg-gray-900' : 'bg-white'}`}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Convert to Customer</h2>
+              <button onClick={() => setConvertModal(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+            <p className={`text-sm mb-5 ${d ? 'text-gray-400' : 'text-gray-500'}`}>
+              Converting <strong>{convertModal.name}</strong> to a customer.
+            </p>
+            <form onSubmit={handleConvert} className="space-y-4">
+              {[
+                { label: 'Company name *', key: 'companyName', placeholder: 'Company Pvt Ltd' },
+                { label: 'Project name', key: 'projectName', placeholder: 'CRM Implementation' },
+                { label: 'Total value (₹)', key: 'totalValue', placeholder: '500000' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className={`text-xs font-semibold block mb-1.5 ${d ? 'text-gray-400' : 'text-gray-600'}`}>{f.label}</label>
+                  <input
+                    type="text"
+                    placeholder={f.placeholder}
+                    value={(convertForm as any)[f.key]}
+                    onChange={(e) => setConvertForm({ ...convertForm, [f.key]: e.target.value })}
+                    required={f.label.includes('*')}
+                    className={`w-full px-4 py-2.5 rounded-xl text-sm border outline-none ${d ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+                  />
+                </div>
+              ))}
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setConvertModal(null)} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold ${d ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={converting} className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">
+                  {converting ? 'Converting...' : 'Convert →'}
                 </button>
               </div>
             </form>
