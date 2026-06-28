@@ -4,6 +4,8 @@ import Leads from './Leads'
 import Pipeline from './Pipeline'
 import Analytics from './Analytics'
 import Customers from './Customers'
+import Tasks from './Tasks'
+import Meetings from './Meetings'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -209,6 +211,8 @@ export default function Dashboard() {
 {activeNav === 'Pipeline' && <Pipeline dark={d} />}
 {activeNav === 'Reports' && <Analytics dark={d} />}
 {activeNav === 'Customers' && <Customers dark={d} />}
+{activeNav === 'Tasks' && <Tasks dark={d} />}
+{activeNav === 'Meetings' && <Meetings dark={d} />}
         </div>
       </div>
     </div>

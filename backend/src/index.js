@@ -33,6 +33,13 @@ app.use('/api/leads', leadRoutes)
 
 const customerRoutes = require('./routes/customer.routes')
 app.use('/api/customers', customerRoutes)
+
+const taskRoutes = require('./routes/task.routes')
+app.use('/api/tasks', taskRoutes)
+
+const meetingRoutes = require('./routes/meeting.routes')
+app.use('/api/meetings', meetingRoutes)
+
 // Test route
 app.get('/', (req, res) => {
   res.json({ message: 'SmartCRM Pro API is running!' })
