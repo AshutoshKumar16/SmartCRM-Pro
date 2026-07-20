@@ -1,7 +1,8 @@
 const prisma = require('../config/db')
+const { sendLeadAssignedEmail } = require('../utils/emailService')
 
 // Public route — website se lead create
-const createPublicLead = async (req, res) => {
+const createPublicLead = async (req, res, next) => {
   try {
     const { name, email, phone, company, budget, message } = req.body
     if (!name || !email) return res.status(400).json({ message: 'Name and email required' })
@@ -14,13 +15,12 @@ const createPublicLead = async (req, res) => {
     })
     res.status(201).json({ message: 'Enquiry submitted successfully', lead })
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ message: 'Server error' })
+    next(err)
   }
 }
 
 // Get all leads — role based
-const getLeads = async (req, res) => {
+const getLeads = async (req, res, next) => {
   try {
     const { role, id } = req.user
     const where = role === 'SALES_EXEC' ? { assignedToId: id } : {}
@@ -35,12 +35,12 @@ const getLeads = async (req, res) => {
     })
     res.json(leads)
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    next(err)
   }
 }
 
 // Create lead — from CRM
-const createLead = async (req, res) => {
+const createLead = async (req, res, next) => {
   try {
     const { name, email, phone, company, budget, source, assignedToId } = req.body
     if (!name || !email) return res.status(400).json({ message: 'Name and email required' })
@@ -56,12 +56,12 @@ const createLead = async (req, res) => {
     })
     res.status(201).json(lead)
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    next(err)
   }
 }
 
 // Update lead status
-const updateLeadStatus = async (req, res) => {
+const updateLeadStatus = async (req, res, next) => {
   try {
     const { id } = req.params
     const { status } = req.body
@@ -72,34 +72,42 @@ const updateLeadStatus = async (req, res) => {
     })
     res.json(lead)
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    next(err)
   }
 }
 
 // Assign lead
-const assignLead = async (req, res) => {
+const assignLead = async (req, res, next) => {
   try {
     const { id } = req.params
     const { assignedToId } = req.body
 
     const lead = await prisma.lead.update({
       where: { id },
-      data: { assignedToId }
+      data: { assignedToId },
+      include: {
+        assignedTo: { select: { id: true, name: true, email: true, role: true } }
+      }
     })
+
+    if (lead.assignedTo?.email) {
+      await sendLeadAssignedEmail(lead, lead.assignedTo)
+    }
+
     res.json(lead)
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    next(err)
   }
 }
 
 // Delete lead
-const deleteLead = async (req, res) => {
+const deleteLead = async (req, res, next) => {
   try {
     const { id } = req.params
     await prisma.lead.delete({ where: { id } })
     res.json({ message: 'Lead deleted' })
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    next(err)
   }
 }
 
