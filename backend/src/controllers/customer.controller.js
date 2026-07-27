@@ -1,6 +1,6 @@
 const prisma = require('../config/db')
 
-const getCustomers = async (req, res) => {
+const getCustomers = async (req, res, next) => {
   try {
     const customers = await prisma.customer.findMany({
       include: {
@@ -11,11 +11,11 @@ const getCustomers = async (req, res) => {
     })
     res.json(customers)
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    next(err)
   }
 }
 
-const convertLeadToCustomer = async (req, res) => {
+const convertLeadToCustomer = async (req, res, next) => {
   try {
     const { leadId, companyName, projectName, totalValue } = req.body
 
@@ -30,7 +30,7 @@ const convertLeadToCustomer = async (req, res) => {
 
     res.status(201).json(customer)
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    next(err)
   }
 }
 

@@ -3,7 +3,7 @@ const prisma = require('../config/db')
 const { generateAccessToken, generateRefreshToken } = require('../utils/generateToken')
 const jwt = require('jsonwebtoken')
 
-const register = async (req, res) => {
+const register = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body
     const exists = await prisma.user.findUnique({ where: { email } })
@@ -16,11 +16,11 @@ const register = async (req, res) => {
 
     res.status(201).json({ message: 'User created', user: { id: user.id, name: user.name, role: user.role } })
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    next(err)
   }
 }
 
-const login = async (req, res) => {
+const login = async (req, res, next) => {
   try {
     const { email, password } = req.body
     const user = await prisma.user.findUnique({ where: { email } })
@@ -42,11 +42,11 @@ const login = async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email, role: user.role }
     })
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    next(err)
   }
 }
 
-const refresh = async (req, res) => {
+const refresh = async (req, res, next) => {
   try {
     const token = req.cookies.refreshToken
     if (!token) return res.status(401).json({ message: 'No refresh token' })
@@ -56,8 +56,8 @@ const refresh = async (req, res) => {
     const accessToken = generateAccessToken(user)
 
     res.json({ accessToken })
-  } catch {
-    res.status(401).json({ message: 'Invalid refresh token' })
+  } catch (err) {
+    next(err)
   }
 }
 

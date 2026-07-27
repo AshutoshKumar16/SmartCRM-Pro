@@ -1,6 +1,6 @@
 const prisma = require('../config/db')
 
-const getMeetings = async (req, res) => {
+const getMeetings = async (req, res, next) => {
   try {
     const meetings = await prisma.meeting.findMany({
       include: {
@@ -10,12 +10,12 @@ const getMeetings = async (req, res) => {
       orderBy: { scheduledAt: 'asc' }
     })
     res.json(meetings)
-  } catch {
-    res.status(500).json({ message: 'Server error' })
+  } catch (err) {
+    next(err)
   }
 }
 
-const createMeeting = async (req, res) => {
+const createMeeting = async (req, res, next) => {
   try {
     const { title, leadId, customerId, scheduledAt, notes } = req.body
     if (!title || !scheduledAt) return res.status(400).json({ message: 'Title and date required' })
@@ -30,29 +30,29 @@ const createMeeting = async (req, res) => {
       }
     })
     res.status(201).json(meeting)
-  } catch {
-    res.status(500).json({ message: 'Server error' })
+  } catch (err) {
+    next(err)
   }
 }
 
-const updateMeeting = async (req, res) => {
+const updateMeeting = async (req, res, next) => {
   try {
     const meeting = await prisma.meeting.update({
       where: { id: req.params.id },
       data: req.body
     })
     res.json(meeting)
-  } catch {
-    res.status(500).json({ message: 'Server error' })
+  } catch (err) {
+    next(err)
   }
 }
 
-const deleteMeeting = async (req, res) => {
+const deleteMeeting = async (req, res, next) => {
   try {
     await prisma.meeting.delete({ where: { id: req.params.id } })
     res.json({ message: 'Meeting deleted' })
-  } catch {
-    res.status(500).json({ message: 'Server error' })
+  } catch (err) {
+    next(err)
   }
 }
 
