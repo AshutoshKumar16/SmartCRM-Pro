@@ -11,8 +11,8 @@ export default function Home() {
       <section className="bg-white py-24 px-6 text-center">
         <div className="max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 text-sm font-medium px-4 py-2 rounded-full mb-6">
-            ⚡ Trusted by 500+ companies across India
-          </div>
+  🚧 Currently in Development
+</div>
           <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-6">
             The CRM that closes deals<br />
             <span className="text-blue-600">faster than ever</span>
@@ -32,10 +32,10 @@ export default function Home() {
           {/* Stats */}
           <div className="flex justify-center gap-12 mt-16 pt-10 border-t border-gray-100">
             {[
-              { val: '500+', lab: 'Companies' },
-              { val: '₹200Cr+', lab: 'Revenue tracked' },
-              { val: '12K+', lab: 'Leads managed' },
-              { val: '4.9★', lab: 'Average rating' },
+               { val: '12+', lab: 'Core Features' },
+  { val: '3', lab: 'User Roles' },
+  { val: 'AI', lab: 'Email Assistant' },
+  { val: 'v0.3', lab: 'Current Build' },
             ].map((s) => (
               <div key={s.lab} className="text-center">
                 <div className="text-2xl font-bold text-gray-900">{s.val}</div>

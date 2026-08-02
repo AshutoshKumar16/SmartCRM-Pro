@@ -166,13 +166,13 @@ export default function Dashboard() {
                     <span className={`font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>Quick Actions</span>
                   </div>
                   <div className="p-5 flex flex-col gap-2.5">
-                    {[
-                      { label: '+ Add new lead', primary: true },
-                      { label: 'Schedule meeting', primary: false },
-                      { label: 'Create task', primary: false },
-                      { label: 'Generate invoice', primary: false },
-                      { label: 'View pipeline', primary: false },
-                    ].map((a) => (
+  {[
+    { label: '+ Add new lead', primary: true, roles: ['ADMIN', 'MANAGER'] },
+    { label: 'Schedule meeting', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'] },
+    { label: 'Create task', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'] },
+    { label: 'Generate invoice', primary: false, roles: ['ADMIN', 'MANAGER'] },
+    { label: 'View pipeline', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'] },
+  ].filter((a) => a.roles.includes(user.role)).map((a) => (
                       <button
                         key={a.label}
                         onClick={() => a.label.includes('lead') ? setActiveNav('Leads') : null}

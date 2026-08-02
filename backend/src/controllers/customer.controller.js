@@ -2,7 +2,13 @@ const prisma = require('../config/db')
 
 const getCustomers = async (req, res, next) => {
   try {
+    const { role, id } = req.user
+    const where = role === 'SALES_EXEC'
+      ? { lead: { assignedToId: id } }
+      : {}
+
     const customers = await prisma.customer.findMany({
+      where,
       include: {
         lead: { select: { name: true, email: true, phone: true } },
         payments: true,
