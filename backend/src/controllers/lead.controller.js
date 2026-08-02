@@ -1,5 +1,6 @@
 const prisma = require('../config/db')
 const { sendLeadAssignedEmail } = require('../utils/emailService')
+const { getNextAssignee } = require('../utils/autoAssign')
 
 // Public route — website se lead create
 const createPublicLead = async (req, res, next) => {
@@ -10,9 +11,25 @@ const createPublicLead = async (req, res, next) => {
     const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
     if (!admin) return res.status(500).json({ message: 'No admin found' })
 
+    const assignedToId = await getNextAssignee()
+
     const lead = await prisma.lead.create({
-      data: { name, email, phone, company, budget, source: 'WEBSITE', status: 'NEW', createdById: admin.id }
+      data: {
+        name, email, phone, company, budget,
+        source: 'WEBSITE',
+        status: 'NEW',
+        createdById: admin.id,
+        assignedToId: assignedToId || null
+      },
+      include: {
+        assignedTo: { select: { id: true, name: true, email: true } }
+      }
     })
+
+    if (lead.assignedTo?.email) {
+      await sendLeadAssignedEmail(lead, lead.assignedTo)
+    }
+
     res.status(201).json({ message: 'Enquiry submitted successfully', lead })
   } catch (err) {
     next(err)
