@@ -25,6 +25,7 @@ const statusColors: Record<string, string> = {
 }
 
 export default function Leads({ dark }: { dark: boolean }) {
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -112,12 +113,14 @@ export default function Leads({ dark }: { dark: boolean }) {
           <h1 className={`text-2xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Leads</h1>
           <p className={`text-sm mt-1 ${d ? 'text-gray-400' : 'text-gray-500'}`}>{leads.length} total leads</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition"
-        >
-          + Add lead
-        </button>
+        {user.role !== 'SALES_EXEC' && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition"
+          >
+            + Add lead
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-3 mb-6 flex-wrap">
@@ -200,12 +203,14 @@ export default function Leads({ dark }: { dark: boolean }) {
                           Convert
                         </button>
                       )}
-                      <button
-                        onClick={() => handleDelete(lead.id)}
-                        className="text-xs text-red-400 hover:text-red-600 font-medium transition"
-                      >
-                        Delete
-                      </button>
+                      {user.role !== 'SALES_EXEC' && (
+                        <button
+                          onClick={() => handleDelete(lead.id)}
+                          className="text-xs text-red-400 hover:text-red-600 font-medium transition"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
