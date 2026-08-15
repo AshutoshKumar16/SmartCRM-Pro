@@ -7,6 +7,7 @@ const dotenv = require('dotenv')
 const errorHandler = require('./middleware/errorHandler')
 dotenv.config()
 const { startCronJobs } = require('./utils/cronJobs')
+const userRoutes = require('./routes/user.routes')
 
 const app = express()
 
@@ -49,6 +50,7 @@ app.get('/', (req, res) => {
 // ... saari routes ...
 app.use('/api/leads', leadRoutes)
 app.use('/api/auth', authRoutes)
+app.use('/api/users', userRoutes)
 // ... etc
 
 app.use(errorHandler)   // ← routes ke baad, listen se pehle
