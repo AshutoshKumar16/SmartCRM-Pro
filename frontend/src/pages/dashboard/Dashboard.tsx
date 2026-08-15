@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { connectSocket, disconnectSocket, getSocket } from '../../lib/socket'
 import Employees from './Employees'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
@@ -11,14 +13,29 @@ import Meetings from './Meetings'
 export default function Dashboard() {
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
+  useEffect(() => {
+  if (user.id) {
+    connectSocket(user.id)
+    const socket = getSocket()
+
+    socket?.on('newLead', (data) => {
+      alert(data.message)
+    })
+  }
+
+  return () => {
+    getSocket()?.off('newLead')
+  }
+}, [])
   const [activeNav, setActiveNav] = useState('Dashboard')
   const [dark, setDark] = useState(false)
 
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('user')
-    navigate('/login')
-  }
+ const handleLogout = () => {
+  disconnectSocket()
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('user')
+  navigate('/login')
+}
 
   const mainNav = ['Dashboard', 'Leads', 'Customers', 'Pipeline', 'Meetings', 'Tasks', 'Employees']
   const analyticsNav = ['Reports', 'Leaderboard', 'Audit Log']

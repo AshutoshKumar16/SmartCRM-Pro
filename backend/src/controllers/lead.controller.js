@@ -1,6 +1,7 @@
 const prisma = require('../config/db')
 const { sendLeadAssignedEmail } = require('../utils/emailService')
 const { getNextAssignee } = require('../utils/autoAssign')
+const { getIO } = require('../utils/socket')
 
 // Public route — website se lead create
 const createPublicLead = async (req, res, next) => {
@@ -28,6 +29,18 @@ const createPublicLead = async (req, res, next) => {
 
     if (lead.assignedTo?.email) {
       await sendLeadAssignedEmail(lead, lead.assignedTo)
+    }
+
+    if (lead.assignedTo?.id) {
+      try {
+        const io = getIO()
+        io.to(lead.assignedTo.id).emit('newLead', {
+          message: `New lead assigned: ${lead.name}`,
+          lead
+        })
+      } catch (socketErr) {
+        console.error('Socket emit failed:', socketErr.message)
+      }
     }
 
     res.status(201).json({ message: 'Enquiry submitted successfully', lead })
@@ -109,6 +122,18 @@ const assignLead = async (req, res, next) => {
 
     if (lead.assignedTo?.email) {
       await sendLeadAssignedEmail(lead, lead.assignedTo)
+    }
+
+    if (lead.assignedTo?.id) {
+      try {
+        const io = getIO()
+        io.to(lead.assignedTo.id).emit('newLead', {
+          message: `New lead assigned: ${lead.name}`,
+          lead
+        })
+      } catch (socketErr) {
+        console.error('Socket emit failed:', socketErr.message)
+      }
     }
 
     res.json(lead)
