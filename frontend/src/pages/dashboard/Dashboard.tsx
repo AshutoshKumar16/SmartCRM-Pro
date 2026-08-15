@@ -1,3 +1,4 @@
+import Employees from './Employees'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import Leads from './Leads'
@@ -19,7 +20,7 @@ export default function Dashboard() {
     navigate('/login')
   }
 
-  const mainNav = ['Dashboard', 'Leads', 'Customers', 'Pipeline', 'Meetings', 'Tasks']
+  const mainNav = ['Dashboard', 'Leads', 'Customers', 'Pipeline', 'Meetings', 'Tasks', 'Employees']
   const analyticsNav = ['Reports', 'Leaderboard', 'Audit Log']
 
   const metrics = [
@@ -213,6 +214,7 @@ export default function Dashboard() {
 {activeNav === 'Customers' && <Customers dark={d} />}
 {activeNav === 'Tasks' && <Tasks dark={d} />}
 {activeNav === 'Meetings' && <Meetings dark={d} />}
+{activeNav === 'Employees' && <Employees dark={d} />}
         </div>
       </div>
     </div>
