@@ -2,6 +2,7 @@ const prisma = require('../config/db')
 const { sendLeadAssignedEmail } = require('../utils/emailService')
 const { getNextAssignee } = require('../utils/autoAssign')
 const { getIO } = require('../utils/socket')
+const { logActivity } = require('../utils/activityLogger')
 
 // Public route — website se lead create
 const createPublicLead = async (req, res, next) => {
@@ -84,6 +85,9 @@ const createLead = async (req, res, next) => {
         assignedToId: assignedToId || null
       }
     })
+
+    await logActivity(req.user.id, `Created a new lead: ${lead.name}`, 'Lead', lead.id)
+
     res.status(201).json(lead)
   } catch (err) {
     next(err)
@@ -100,6 +104,9 @@ const updateLeadStatus = async (req, res, next) => {
       where: { id },
       data: { status }
     })
+
+    await logActivity(req.user.id, `Changed lead status to ${status}`, 'Lead', lead.id, { name: lead.name, status })
+
     res.json(lead)
   } catch (err) {
     next(err)
@@ -136,6 +143,8 @@ const assignLead = async (req, res, next) => {
       }
     }
 
+    await logActivity(req.user.id, `Assigned lead "${lead.name}" to ${lead.assignedTo?.name}`, 'Lead', lead.id)
+
     res.json(lead)
   } catch (err) {
     next(err)
@@ -147,6 +156,9 @@ const deleteLead = async (req, res, next) => {
   try {
     const { id } = req.params
     await prisma.lead.delete({ where: { id } })
+
+    await logActivity(req.user.id, `Deleted a lead`, 'Lead', id)
+
     res.json({ message: 'Lead deleted' })
   } catch (err) {
     next(err)

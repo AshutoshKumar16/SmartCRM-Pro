@@ -1,3 +1,4 @@
+const activityLogRoutes = require('./routes/activityLog.routes')
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
@@ -66,6 +67,7 @@ app.use('/api/customers', customerRoutes)
 app.use('/api/tasks', taskRoutes)
 app.use('/api/meetings', meetingRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/activity-logs', activityLogRoutes)
 
 // Test route
 app.get('/', (req, res) => {
