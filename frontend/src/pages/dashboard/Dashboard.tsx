@@ -216,23 +216,22 @@ export default function Dashboard() {
                   </div>
                   <div className="p-5 flex flex-col gap-2.5">
                     {[
-                      { label: 'Add new lead', primary: true, roles: ['ADMIN', 'MANAGER'] },
-                      { label: 'Schedule meeting', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'] },
-                      { label: 'Create task', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'] },
-                      { label: 'Generate invoice', primary: false, roles: ['ADMIN', 'MANAGER'] },
-                      { label: 'View pipeline', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'] },
-                    ].filter((a) => a.roles.includes(user.role)).map((a) => (
-                      <button
-                        key={a.label}
-                        onClick={() => a.label.includes('lead') ? setActiveNav('Leads') : null}
-                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition ${
-                          a.primary
-                            ? 'bg-brand-600 text-white hover:bg-brand-700'
-                            : d
-                            ? 'bg-ink-800 text-ink-300 hover:bg-ink-700'
-                            : 'bg-ink-50 text-ink-700 hover:bg-ink-100'
-                        }`}
-                      >
+  { label: 'Add new lead', primary: true, roles: ['ADMIN', 'MANAGER'], nav: 'Leads' },
+  { label: 'Schedule meeting', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'], nav: 'Meetings' },
+  { label: 'Create task', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'], nav: 'Tasks' },
+  { label: 'Generate invoice', primary: false, roles: ['ADMIN', 'MANAGER'], nav: 'Customers' },
+  { label: 'View pipeline', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'], nav: 'Pipeline' },
+].filter((a) => a.roles.includes(user.role)).map((a) => (
+  <button
+    key={a.label}
+    onClick={() => setActiveNav(a.nav)}
+                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all active:scale-[0.98] ${
+  a.primary
+    ? 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800'
+    : d
+    ? 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-white active:bg-brand-600 active:text-white'
+    : 'bg-ink-50 text-ink-700 hover:bg-ink-100 hover:text-ink-900 active:bg-brand-100 active:text-brand-700'
+}`}      >
                         {a.label}
                       </button>
                     ))}
