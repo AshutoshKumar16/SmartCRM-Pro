@@ -1,1 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', monospace;
+
+  --color-brand-50: #eef1fd;
+  --color-brand-100: #dce3fb;
+  --color-brand-500: #2952e3;
+  --color-brand-600: #1e40d1;
+  --color-brand-700: #1832a8;
+
+  --color-ink-50: #f7f8fa;
+  --color-ink-100: #eceef2;
+  --color-ink-200: #dfe2e8;
+  --color-ink-800: #1c1f27;
+  --color-ink-900: #14161a;
+  --color-ink-950: #0b0e14;
+
+  --color-success-500: #0f9d6e;
+  --color-success-100: #d7f3e9;
+}
+
+body {
+  font-family: var(--font-sans);
+}
