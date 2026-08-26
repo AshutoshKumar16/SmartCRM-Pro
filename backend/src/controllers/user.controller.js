@@ -5,6 +5,7 @@ const getEmployees = async (req, res, next) => {
     const employees = await prisma.user.findMany({
       select: {
         id: true,
+        employeeCode: true,
         name: true,
         email: true,
         role: true,
@@ -27,6 +28,7 @@ const getLeaderboard = async (req, res, next) => {
       where: { role: 'SALES_EXEC' },
       select: {
         id: true,
+        employeeCode: true,
         name: true,
         email: true,
         leads: {
@@ -42,6 +44,7 @@ const getLeaderboard = async (req, res, next) => {
 
       return {
         id: emp.id,
+        employeeCode: emp.employeeCode,
         name: emp.name,
         email: emp.email,
         totalLeads,
