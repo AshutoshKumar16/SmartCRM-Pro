@@ -1,3 +1,4 @@
+import Leaderboard from './Leaderboard'
 import AuditLog from './AuditLog'
 import { useEffect } from 'react'
 import { connectSocket, disconnectSocket, getSocket } from '../../lib/socket'
@@ -265,6 +266,7 @@ export default function Dashboard() {
           {activeNav === 'Meetings' && <Meetings dark={d} />}
           {activeNav === 'Employees' && <Employees dark={d} />}
           {activeNav === 'Audit Log' && <AuditLog dark={d} />}
+          {activeNav === 'Leaderboard' && <Leaderboard dark={d} />}
         </div>
       </div>
     </div>
