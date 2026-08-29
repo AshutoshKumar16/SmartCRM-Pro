@@ -1,20 +1,20 @@
 import Leaderboard from './Leaderboard'
 import AuditLog from './AuditLog'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { connectSocket, disconnectSocket, getSocket } from '../../lib/socket'
 import Employees from './Employees'
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
 import Leads from './Leads'
 import Pipeline from './Pipeline'
 import Analytics from './Analytics'
 import Customers from './Customers'
 import Tasks from './Tasks'
 import Meetings from './Meetings'
+import api from '../../lib/axios'
 import {
   LayoutDashboard, Users, Building2, Kanban, Calendar, CheckSquare, UserCog,
   BarChart3, Trophy, ScrollText, Sun, Moon, Bell, LogOut,
-  Target, TrendingUp, IndianRupee, CalendarClock, FileText
+  Target, IndianRupee, CalendarClock
 } from 'lucide-react'
 
 const navIcons: Record<string, any> = {
@@ -30,9 +30,25 @@ const navIcons: Record<string, any> = {
   'Audit Log': ScrollText,
 }
 
+interface DashboardStats {
+  totalLeads: number
+  conversionRate: number
+  revenue: number
+  meetingsToday: number
+  recentLeads: any[]
+  activeDeals: number
+  upcomingMeetings: number
+  pendingTasks: number
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const [activeNav, setActiveNav] = useState('Dashboard')
+  const [dark, setDark] = useState(false)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(true)
+
   useEffect(() => {
     if (user.id) {
       connectSocket(user.id)
@@ -47,8 +63,13 @@ export default function Dashboard() {
       getSocket()?.off('newLead')
     }
   }, [])
-  const [activeNav, setActiveNav] = useState('Dashboard')
-  const [dark, setDark] = useState(false)
+
+  useEffect(() => {
+    if (activeNav === 'Dashboard') {
+      setStatsLoading(true)
+      api.get('/dashboard').then(res => setStats(res.data)).catch(console.error).finally(() => setStatsLoading(false))
+    }
+  }, [activeNav])
 
   const handleLogout = () => {
     disconnectSocket()
@@ -61,10 +82,10 @@ export default function Dashboard() {
   const analyticsNav = ['Reports', 'Leaderboard', 'Audit Log']
 
   const metrics = [
-    { label: 'Total Leads', value: '0', delta: '+0 today', icon: Users, accent: 'text-brand-600' },
-    { label: 'Conversion Rate', value: '0%', delta: 'No data yet', icon: Target, accent: 'text-success-500' },
-    { label: 'Revenue (Month)', value: '₹0', delta: 'No data yet', icon: IndianRupee, accent: 'text-violet-600' },
-    { label: 'Meetings Today', value: '0', delta: 'No meetings', icon: CalendarClock, accent: 'text-amber-600' },
+    { label: 'Total Leads', value: stats?.totalLeads ?? 0, delta: `${stats?.activeDeals ?? 0} active deals`, icon: Users, accent: 'text-brand-600' },
+    { label: 'Conversion Rate', value: `${stats?.conversionRate ?? 0}%`, delta: 'Leads won', icon: Target, accent: 'text-success-500' },
+    { label: 'Revenue', value: `₹${(stats?.revenue ?? 0).toLocaleString()}`, delta: 'From won deals', icon: IndianRupee, accent: 'text-violet-600' },
+    { label: 'Meetings Today', value: stats?.meetingsToday ?? 0, delta: `${stats?.upcomingMeetings ?? 0} upcoming`, icon: CalendarClock, accent: 'text-amber-600' },
   ]
 
   const d = dark
@@ -189,7 +210,9 @@ export default function Dashboard() {
                       <span className={`text-sm font-medium ${d ? 'text-ink-400' : 'text-ink-500'}`}>{m.label}</span>
                       <m.icon className={`w-5 h-5 ${m.accent}`} />
                     </div>
-                    <div className={`text-4xl font-bold mb-2 font-mono ${d ? 'text-white' : 'text-ink-900'}`}>{m.value}</div>
+                    <div className={`text-4xl font-bold mb-2 font-mono ${d ? 'text-white' : 'text-ink-900'}`}>
+                      {statsLoading ? '—' : m.value}
+                    </div>
                     <div className={`text-xs font-medium ${d ? 'text-ink-600' : 'text-ink-400'}`}>{m.delta}</div>
                   </div>
                 ))}
@@ -201,13 +224,34 @@ export default function Dashboard() {
                     <span className={`font-semibold ${d ? 'text-white' : 'text-ink-900'}`}>Recent Leads</span>
                     <button onClick={() => setActiveNav('Leads')} className="text-sm text-brand-600 hover:underline font-medium">View all →</button>
                   </div>
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${d ? 'bg-ink-800' : 'bg-ink-50'}`}>
-                      <Users className={`w-6 h-6 ${d ? 'text-ink-500' : 'text-ink-400'}`} />
+
+                  {statsLoading ? (
+                    <div className="py-16 text-center text-ink-400 text-sm">Loading...</div>
+                  ) : !stats?.recentLeads?.length ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${d ? 'bg-ink-800' : 'bg-ink-50'}`}>
+                        <Users className={`w-6 h-6 ${d ? 'text-ink-500' : 'text-ink-400'}`} />
+                      </div>
+                      <div className={`text-sm font-semibold mb-1 ${d ? 'text-white' : 'text-ink-800'}`}>No leads yet</div>
+                      <div className={`text-xs max-w-xs ${d ? 'text-ink-500' : 'text-ink-400'}`}>Submit an enquiry from the website or add a lead manually.</div>
                     </div>
-                    <div className={`text-sm font-semibold mb-1 ${d ? 'text-white' : 'text-ink-800'}`}>No leads yet</div>
-                    <div className={`text-xs max-w-xs ${d ? 'text-ink-500' : 'text-ink-400'}`}>Submit an enquiry from the website or add a lead manually.</div>
-                  </div>
+                  ) : (
+                    <div className="divide-y divide-ink-100">
+                      {stats.recentLeads.map((lead) => (
+                        <div key={lead.id} className={`px-7 py-4 flex items-center justify-between ${d ? 'divide-ink-800' : ''}`}>
+                          <div>
+                            <div className={`text-sm font-semibold ${d ? 'text-white' : 'text-ink-900'}`}>{lead.name}</div>
+                            <div className="text-xs text-ink-400">{lead.assignedTo?.name || 'Unassigned'}</div>
+                          </div>
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${
+                            lead.status === 'WON' ? 'bg-success-100 text-success-500' :
+                            lead.status === 'LOST' ? 'bg-red-100 text-red-700' :
+                            d ? 'bg-ink-800 text-ink-300' : 'bg-ink-100 text-ink-600'
+                          }`}>{lead.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className={`rounded-2xl border ${d ? 'bg-ink-900 border-ink-800' : 'bg-white border-ink-100'} shadow-sm`}>
@@ -216,22 +260,23 @@ export default function Dashboard() {
                   </div>
                   <div className="p-5 flex flex-col gap-2.5">
                     {[
-  { label: 'Add new lead', primary: true, roles: ['ADMIN', 'MANAGER'], nav: 'Leads' },
-  { label: 'Schedule meeting', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'], nav: 'Meetings' },
-  { label: 'Create task', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'], nav: 'Tasks' },
-  { label: 'Generate invoice', primary: false, roles: ['ADMIN', 'MANAGER'], nav: 'Customers' },
-  { label: 'View pipeline', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'], nav: 'Pipeline' },
-].filter((a) => a.roles.includes(user.role)).map((a) => (
-  <button
-    key={a.label}
-    onClick={() => setActiveNav(a.nav)}
-                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all active:scale-[0.98] ${
-  a.primary
-    ? 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800'
-    : d
-    ? 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-white active:bg-brand-600 active:text-white'
-    : 'bg-ink-50 text-ink-700 hover:bg-ink-100 hover:text-ink-900 active:bg-brand-100 active:text-brand-700'
-}`}      >
+                      { label: 'Add new lead', primary: true, roles: ['ADMIN', 'MANAGER'], nav: 'Leads' },
+                      { label: 'Schedule meeting', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'], nav: 'Meetings' },
+                      { label: 'Create task', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'], nav: 'Tasks' },
+                      { label: 'Generate invoice', primary: false, roles: ['ADMIN', 'MANAGER'], nav: 'Customers' },
+                      { label: 'View pipeline', primary: false, roles: ['ADMIN', 'MANAGER', 'SALES_EXEC'], nav: 'Pipeline' },
+                    ].filter((a) => a.roles.includes(user.role)).map((a) => (
+                      <button
+                        key={a.label}
+                        onClick={() => setActiveNav(a.nav)}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all active:scale-[0.98] ${
+                          a.primary
+                            ? 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800'
+                            : d
+                            ? 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-white active:bg-brand-600 active:text-white'
+                            : 'bg-ink-50 text-ink-700 hover:bg-ink-100 hover:text-ink-900 active:bg-brand-100 active:text-brand-700'
+                        }`}
+                      >
                         {a.label}
                       </button>
                     ))}
@@ -241,16 +286,20 @@ export default function Dashboard() {
 
               <div className="grid grid-cols-3 gap-5">
                 {[
-                  { icon: Kanban, title: 'Pipeline', sub: 'No active deals' },
-                  { icon: Calendar, title: 'Meetings', sub: 'No meetings scheduled' },
-                  { icon: CheckSquare, title: 'Tasks', sub: 'No pending tasks' },
+                  { icon: Kanban, title: 'Pipeline', sub: `${stats?.activeDeals ?? 0} active deals`, nav: 'Pipeline' },
+                  { icon: Calendar, title: 'Meetings', sub: `${stats?.upcomingMeetings ?? 0} scheduled`, nav: 'Meetings' },
+                  { icon: CheckSquare, title: 'Tasks', sub: `${stats?.pendingTasks ?? 0} pending`, nav: 'Tasks' },
                 ].map((c) => (
-                  <div key={c.title} className={`rounded-2xl border p-8 flex flex-col items-center justify-center text-center shadow-sm ${d ? 'bg-ink-900 border-ink-800' : 'bg-white border-ink-100'}`}>
+                  <div
+                    key={c.title}
+                    onClick={() => setActiveNav(c.nav)}
+                    className={`rounded-2xl border p-8 flex flex-col items-center justify-center text-center shadow-sm cursor-pointer hover:border-brand-300 transition ${d ? 'bg-ink-900 border-ink-800' : 'bg-white border-ink-100'}`}
+                  >
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${d ? 'bg-ink-800' : 'bg-ink-50'}`}>
                       <c.icon className={`w-5 h-5 ${d ? 'text-ink-400' : 'text-ink-500'}`} />
                     </div>
                     <div className={`text-sm font-semibold mb-1 ${d ? 'text-white' : 'text-ink-800'}`}>{c.title}</div>
-                    <div className={`text-xs ${d ? 'text-ink-500' : 'text-ink-400'}`}>{c.sub}</div>
+                    <div className={`text-xs ${d ? 'text-ink-500' : 'text-ink-400'}`}>{statsLoading ? '...' : c.sub}</div>
                   </div>
                 ))}
               </div>
