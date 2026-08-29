@@ -1,4 +1,5 @@
 const activityLogRoutes = require('./routes/activityLog.routes')
+const dashboardRoutes = require('./routes/dashboard.routes')
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
@@ -61,6 +62,7 @@ const taskRoutes = require('./routes/task.routes')
 const meetingRoutes = require('./routes/meeting.routes')
 const userRoutes = require('./routes/user.routes')
 
+
 app.use('/api/auth', authRoutes)
 app.use('/api/leads', leadRoutes)
 app.use('/api/customers', customerRoutes)
@@ -68,6 +70,7 @@ app.use('/api/tasks', taskRoutes)
 app.use('/api/meetings', meetingRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/activity-logs', activityLogRoutes)
+app.use('/api/dashboard', dashboardRoutes)
 
 // Test route
 app.get('/', (req, res) => {
