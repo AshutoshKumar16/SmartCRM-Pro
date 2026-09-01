@@ -13,6 +13,7 @@ interface Lead {
   source: string
   score: number
   createdAt: string
+  message?: string
   assignedTo?: { id: string; name: string }
 }
 
@@ -38,6 +39,7 @@ export default function Leads({ dark }: { dark: boolean }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', budget: '', source: 'MANUAL' })
   const [submitting, setSubmitting] = useState(false)
   const [convertModal, setConvertModal] = useState<Lead | null>(null)
+  const [detailModal, setDetailModal] = useState<Lead | null>(null)
   const [convertForm, setConvertForm] = useState({ companyName: '', projectName: '', totalValue: '' })
   const [converting, setConverting] = useState(false)
 
@@ -185,7 +187,7 @@ export default function Leads({ dark }: { dark: boolean }) {
               </thead>
               <tbody>
                 {paginated.map((lead) => (
-                  <tr key={lead.id} className={`border-b last:border-0 ${d ? 'border-ink-800 hover:bg-ink-800' : 'border-ink-50 hover:bg-ink-50'}`}>
+                  <tr key={lead.id} onClick={() => setDetailModal(lead)} className={`border-b last:border-0 cursor-pointer ${d ? 'border-ink-800 hover:bg-ink-800' : 'border-ink-50 hover:bg-ink-50'}`}>
                     <td className="px-6 py-4">
                       <div className={`text-sm font-semibold ${d ? 'text-white' : 'text-ink-900'}`}>{lead.name}</div>
                       <div className="text-xs text-ink-400">{lead.email}</div>
@@ -195,6 +197,7 @@ export default function Leads({ dark }: { dark: boolean }) {
                     <td className="px-6 py-4">
                       <select
                         value={lead.status}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => handleStatusChange(lead.id, e.target.value)}
                         className={`text-xs font-semibold px-2 py-1 rounded-lg border-0 cursor-pointer ${statusColors[lead.status]}`}
                       >
@@ -210,7 +213,8 @@ export default function Leads({ dark }: { dark: boolean }) {
                       <div className="flex items-center gap-3">
                         {lead.status !== 'WON' && (
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setConvertModal(lead)
                               setConvertForm({ companyName: lead.company || '', projectName: '', totalValue: '' })
                             }}
@@ -221,7 +225,10 @@ export default function Leads({ dark }: { dark: boolean }) {
                         )}
                         {user.role !== 'SALES_EXEC' && (
                           <button
-                            onClick={() => handleDelete(lead.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(lead.id)
+                            }}
                             className="text-xs text-red-400 hover:text-red-600 font-medium transition"
                           >
                             Delete
@@ -346,6 +353,43 @@ export default function Leads({ dark }: { dark: boolean }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {detailModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDetailModal(null)}>
+          <div onClick={(e) => e.stopPropagation()} className={`w-full max-w-md rounded-2xl p-6 shadow-xl ${d ? 'bg-ink-900' : 'bg-white'}`}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className={`text-lg font-bold ${d ? 'text-white' : 'text-ink-900'}`}>{detailModal.name}</h2>
+              <button onClick={() => setDetailModal(null)} className="text-ink-400 hover:text-ink-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {[
+                { label: 'Email', value: detailModal.email },
+                { label: 'Phone', value: detailModal.phone || '—' },
+                { label: 'Company', value: detailModal.company || '—' },
+                { label: 'Budget', value: detailModal.budget || '—' },
+                { label: 'Status', value: detailModal.status },
+                { label: 'Assigned to', value: detailModal.assignedTo?.name || 'Unassigned' },
+              ].map(item => (
+                <div key={item.label} className={`p-3 rounded-xl ${d ? 'bg-ink-800' : 'bg-ink-50'}`}>
+                  <div className={`text-xs mb-1 ${d ? 'text-ink-400' : 'text-ink-500'}`}>{item.label}</div>
+                  <div className={`text-sm font-semibold ${d ? 'text-white' : 'text-ink-900'}`}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <div className={`text-xs font-semibold mb-1.5 ${d ? 'text-ink-400' : 'text-ink-500'}`}>Message</div>
+              <div className={`p-3 rounded-xl text-sm ${d ? 'bg-ink-800 text-ink-200' : 'bg-ink-50 text-ink-700'}`}>
+                {detailModal.message || 'No message provided.'}
+              </div>
+            </div>
           </div>
         </div>
       )}

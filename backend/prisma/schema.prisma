@@ -37,6 +37,7 @@ model Lead {
   phone       String?
   company     String?
   budget      String?
+  message     String?
   source      String     @default("WEBSITE")
   status      LeadStatus @default(NEW)
   score       Int        @default(0)

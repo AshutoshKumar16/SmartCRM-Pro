@@ -5,7 +5,7 @@ const createLeadSchema = z.object({
   email: z.string().email('Invalid email format'),
   phone: z.string().optional(),
   company: z.string().optional(),
-  budget: z.number().positive('Budget must be positive').optional(),
+  budget: z.string().optional(),
   source: z.string().optional(),
   assignedToId: z.string().optional()
 })

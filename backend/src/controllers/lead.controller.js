@@ -1,8 +1,8 @@
 const prisma = require('../config/db')
 const { sendLeadAssignedEmail } = require('../utils/emailService')
 const { getNextAssignee } = require('../utils/autoAssign')
-const { getIO } = require('../utils/socket')
 const { logActivity } = require('../utils/activityLogger')
+const { createNotification } = require('../utils/notify')
 
 // Public route — website se lead create
 const createPublicLead = async (req, res, next) => {
@@ -17,7 +17,7 @@ const createPublicLead = async (req, res, next) => {
 
     const lead = await prisma.lead.create({
       data: {
-        name, email, phone, company, budget,
+        name, email, phone, company, budget, message,
         source: 'WEBSITE',
         status: 'NEW',
         createdById: admin.id,
@@ -33,15 +33,7 @@ const createPublicLead = async (req, res, next) => {
     }
 
     if (lead.assignedTo?.id) {
-      try {
-        const io = getIO()
-        io.to(lead.assignedTo.id).emit('newLead', {
-          message: `New lead assigned: ${lead.name}`,
-          lead
-        })
-      } catch (socketErr) {
-        console.error('Socket emit failed:', socketErr.message)
-      }
+      await createNotification(lead.assignedTo.id, `New lead assigned: ${lead.name}`, 'LEAD_ASSIGNED')
     }
 
     res.status(201).json({ message: 'Enquiry submitted successfully', lead })
@@ -76,15 +68,29 @@ const createLead = async (req, res, next) => {
     const { name, email, phone, company, budget, source, assignedToId } = req.body
     if (!name || !email) return res.status(400).json({ message: 'Name and email required' })
 
+    // Agar Admin ne khud koi assignedToId nahi diya, auto-assign kar do
+    const finalAssignedToId = assignedToId || await getNextAssignee()
+
     const lead = await prisma.lead.create({
       data: {
         name, email, phone, company, budget,
         source: source || 'MANUAL',
         status: 'NEW',
         createdById: req.user.id,
-        assignedToId: assignedToId || null
+        assignedToId: finalAssignedToId || null
+      },
+      include: {
+        assignedTo: { select: { id: true, name: true, email: true } }
       }
     })
+
+    if (lead.assignedTo?.email) {
+      await sendLeadAssignedEmail(lead, lead.assignedTo)
+    }
+
+    if (lead.assignedTo?.id) {
+      await createNotification(lead.assignedTo.id, `New lead assigned: ${lead.name}`, 'LEAD_ASSIGNED')
+    }
 
     await logActivity(req.user.id, `Created a new lead: ${lead.name}`, 'Lead', lead.id)
 
@@ -132,15 +138,7 @@ const assignLead = async (req, res, next) => {
     }
 
     if (lead.assignedTo?.id) {
-      try {
-        const io = getIO()
-        io.to(lead.assignedTo.id).emit('newLead', {
-          message: `New lead assigned: ${lead.name}`,
-          lead
-        })
-      } catch (socketErr) {
-        console.error('Socket emit failed:', socketErr.message)
-      }
+      await createNotification(lead.assignedTo.id, `New lead assigned: ${lead.name}`, 'LEAD_ASSIGNED')
     }
 
     await logActivity(req.user.id, `Assigned lead "${lead.name}" to ${lead.assignedTo?.name}`, 'Lead', lead.id)

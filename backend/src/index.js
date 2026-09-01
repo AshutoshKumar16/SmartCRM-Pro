@@ -1,4 +1,5 @@
 const activityLogRoutes = require('./routes/activityLog.routes')
+const notificationRoutes = require('./routes/notification.routes')
 const dashboardRoutes = require('./routes/dashboard.routes')
 const express = require('express')
 const http = require('http')
@@ -71,6 +72,7 @@ app.use('/api/meetings', meetingRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/activity-logs', activityLogRoutes)
 app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/notifications', notificationRoutes)
 
 // Test route
 app.get('/', (req, res) => {

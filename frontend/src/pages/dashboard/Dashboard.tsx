@@ -1,6 +1,6 @@
 import Leaderboard from './Leaderboard'
 import AuditLog from './AuditLog'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { connectSocket, disconnectSocket, getSocket } from '../../lib/socket'
 import Employees from './Employees'
 import { useNavigate } from 'react-router-dom'
@@ -41,6 +41,14 @@ interface DashboardStats {
   pendingTasks: number
 }
 
+interface Notification {
+  id: string
+  message: string
+  type: string
+  isRead: boolean
+  createdAt: string
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -48,21 +56,61 @@ export default function Dashboard() {
   const [dark, setDark] = useState(false)
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false)
+  const notifRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (user.id) {
       connectSocket(user.id)
-      const socket = getSocket()
-
-      socket?.on('newLead', (data) => {
-        alert(data.message)
-      })
-    }
-
-    return () => {
-      getSocket()?.off('newLead')
     }
   }, [])
+
+  const fetchNotifications = () => {
+    api.get('/notifications').then(res => {
+      setNotifications(res.data.notifications)
+      setUnreadCount(res.data.unreadCount)
+    }).catch(console.error)
+  }
+
+  useEffect(() => {
+    if (user.id) {
+      fetchNotifications()
+    }
+  }, [])
+
+  useEffect(() => {
+    const socket = getSocket()
+    socket?.on('notification', () => {
+      fetchNotifications()
+    })
+    return () => {
+      getSocket()?.off('notification')
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleMarkAllRead = async () => {
+    await api.patch('/notifications/read-all')
+    fetchNotifications()
+  }
+
+  const handleNotifClick = async (id: string) => {
+    await api.patch(`/notifications/${id}/read`)
+    fetchNotifications()
+    setShowNotifDropdown(false)
+setActiveNav('Leads')
+  }
 
   useEffect(() => {
     if (activeNav === 'Dashboard') {
@@ -188,10 +236,57 @@ export default function Dashboard() {
             >
               {d ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
             </button>
-            <button className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition ${d ? 'bg-ink-800 hover:bg-ink-700 text-ink-300' : 'bg-ink-100 hover:bg-ink-200 text-ink-600'}`}>
-              <Bell className="w-4.5 h-4.5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
+
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition ${d ? 'bg-ink-800 hover:bg-ink-700 text-ink-300' : 'bg-ink-100 hover:bg-ink-200 text-ink-600'}`}
+              >
+                <Bell className="w-4.5 h-4.5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {showNotifDropdown && (
+                <div className={`absolute right-0 top-full mt-2 w-80 rounded-xl border shadow-lg z-30 ${d ? 'bg-ink-900 border-ink-800' : 'bg-white border-ink-200'}`}>
+                  <div className={`flex items-center justify-between px-4 py-3 border-b ${d ? 'border-ink-800' : 'border-ink-100'}`}>
+                    <span className={`text-sm font-semibold ${d ? 'text-white' : 'text-ink-900'}`}>Notifications</span>
+                    {unreadCount > 0 && (
+                      <button onClick={handleMarkAllRead} className="text-xs text-brand-600 hover:underline font-medium">
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="py-10 text-center text-xs text-ink-400">No notifications yet</div>
+                    ) : (
+                      notifications.map(n => (
+                        <div
+                          key={n.id}
+                          onClick={() => !n.isRead && handleNotifClick(n.id)}
+                          className={`px-4 py-3 border-b last:border-0 cursor-pointer transition ${d ? 'border-ink-800 hover:bg-ink-800' : 'border-ink-50 hover:bg-ink-50'} ${!n.isRead ? (d ? 'bg-ink-800/50' : 'bg-brand-50/50') : ''}`}
+                        >
+                          <div className="flex items-start gap-2">
+                            {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-brand-600 mt-1.5 flex-shrink-0"></span>}
+                            <div className="flex-1">
+                              <div className={`text-xs ${d ? 'text-ink-200' : 'text-ink-700'}`}>{n.message}</div>
+                              <div className="text-[10px] text-ink-400 mt-1 font-mono">
+                                {new Date(n.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-bold">
               {user.name?.charAt(0)}
             </div>
