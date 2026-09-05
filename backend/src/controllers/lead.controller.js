@@ -1,3 +1,4 @@
+const { scoreLeadWithAI } = require('../utils/aiScoring')
 const prisma = require('../config/db')
 const { sendLeadAssignedEmail } = require('../utils/emailService')
 const { getNextAssignee } = require('../utils/autoAssign')
@@ -163,4 +164,28 @@ const deleteLead = async (req, res, next) => {
   }
 }
 
-module.exports = { createPublicLead, getLeads, createLead, updateLeadStatus, assignLead, deleteLead }
+// AI Score a lead
+const scoreLead = async (req, res, next) => {
+  try {
+    const { id } = req.params
+
+    const lead = await prisma.lead.findUnique({ where: { id } })
+    if (!lead) return res.status(404).json({ message: 'Lead not found' })
+
+    const aiResult = await scoreLeadWithAI(lead)
+
+    const updatedLead = await prisma.lead.update({
+      where: { id },
+      data: { score: aiResult.score }
+    })
+
+    res.json({
+      lead: updatedLead,
+      label: aiResult.label,
+      reasoning: aiResult.reasoning
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+module.exports = { createPublicLead, getLeads, createLead, updateLeadStatus, assignLead, deleteLead, scoreLead }
