@@ -86,11 +86,107 @@ const getPendingTasks = async (role, userId) => {
   return { count }
 }
 
+// --- NEW FUNCTIONS (Phase 1) ---
+
+const getEmployeeCount = async (role) => {
+  if (role === 'SALES_EXEC') {
+    return { restricted: true, message: 'This information is only available to Admin and Manager roles.' }
+  }
+
+  const total = await prisma.user.count()
+  const byRole = await prisma.user.groupBy({
+    by: ['role'],
+    _count: true
+  })
+  return { total, byRole }
+}
+
+const getEmployeeList = async (role) => {
+  if (role === 'SALES_EXEC') {
+    return { restricted: true, message: 'This information is only available to Admin and Manager roles.' }
+  }
+
+  const employees = await prisma.user.findMany({
+    select: { name: true, email: true, role: true, employeeCode: true },
+    orderBy: { createdAt: 'asc' }
+  })
+  return { count: employees.length, employees }
+}
+
+const getOverdueTasks = async (role, userId) => {
+  const now = new Date()
+  const where = role === 'SALES_EXEC'
+    ? { assignedToId: userId, status: { not: 'DONE' }, dueDate: { lt: now } }
+    : { status: { not: 'DONE' }, dueDate: { lt: now } }
+
+  const tasks = await prisma.task.findMany({
+    where,
+    select: { title: true, dueDate: true, priority: true, assignedTo: { select: { name: true } } }
+  })
+  return { count: tasks.length, tasks }
+}
+
+const getCustomerHealth = async (role, userId) => {
+  const where = role === 'SALES_EXEC' ? { lead: { assignedToId: userId } } : {}
+  const customers = await prisma.customer.findMany({ where, select: { companyName: true, healthScore: true } })
+
+  const healthy = customers.filter(c => c.healthScore >= 70).length
+  const atRisk = customers.filter(c => c.healthScore >= 40 && c.healthScore < 70).length
+  const critical = customers.filter(c => c.healthScore < 40).length
+
+  return { total: customers.length, healthy, atRisk, critical }
+}
+
+const getUnassignedLeads = async (role) => {
+  if (role === 'SALES_EXEC') {
+    return { restricted: true, message: 'This information is only available to Admin and Manager roles.' }
+  }
+
+  const leads = await prisma.lead.findMany({
+    where: { assignedToId: null },
+    select: { name: true, company: true, status: true, createdAt: true }
+  })
+  return { count: leads.length, leads }
+}
+
+const getFullLeaderboard = async (role) => {
+  if (role === 'SALES_EXEC') {
+    return { restricted: true, message: 'This information is only available to Admin and Manager roles.' }
+  }
+
+  const employees = await prisma.user.findMany({
+    where: { role: 'SALES_EXEC' },
+    select: {
+      name: true,
+      leads: { select: { status: true } }
+    }
+  })
+
+  const ranked = employees.map(emp => {
+    const total = emp.leads.length
+    const won = emp.leads.filter(l => l.status === 'WON').length
+    return {
+      name: emp.name,
+      totalLeads: total,
+      wonLeads: won,
+      conversionRate: total > 0 ? Math.round((won / total) * 100) : 0
+    }
+  }).sort((a, b) => b.wonLeads - a.wonLeads)
+
+  return { leaderboard: ranked }
+}
+
 module.exports = {
   getTotalLeads,
   getRevenue,
   getTopPerformer,
   getHotLeads,
   getTodayMeetings,
-  getPendingTasks
+  getPendingTasks,
+  getEmployeeCount,
+  getEmployeeList,
+  getOverdueTasks,
+  getCustomerHealth,
+  getUnassignedLeads,
+  getFullLeaderboard
 }

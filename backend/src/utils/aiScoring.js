@@ -4,7 +4,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 
 const scoreLeadWithAI = async (lead) => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' })
 
     const daysSinceCreated = Math.floor((Date.now() - new Date(lead.createdAt)) / (1000 * 60 * 60 * 24))
 
