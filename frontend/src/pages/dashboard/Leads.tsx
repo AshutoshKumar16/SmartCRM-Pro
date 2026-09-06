@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../../lib/axios'
-import { Search, Plus, X, Users, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Plus, X, Users, ChevronLeft, ChevronRight, Sparkles, Flame, Snowflake, Sun } from 'lucide-react'
 
 interface Lead {
   id: string
@@ -42,6 +42,8 @@ export default function Leads({ dark }: { dark: boolean }) {
   const [detailModal, setDetailModal] = useState<Lead | null>(null)
   const [convertForm, setConvertForm] = useState({ companyName: '', projectName: '', totalValue: '' })
   const [converting, setConverting] = useState(false)
+  const [aiScoring, setAiScoring] = useState(false)
+  const [aiResult, setAiResult] = useState<{ label: string; reasoning: string } | null>(null)
 
   const fetchLeads = async () => {
     try {
@@ -101,6 +103,28 @@ export default function Leads({ dark }: { dark: boolean }) {
   const handleStatusChange = async (id: string, status: string) => {
     await api.patch(`/leads/${id}/status`, { status })
     fetchLeads()
+  }
+
+  const handleAiScore = async () => {
+    if (!detailModal) return
+    setAiScoring(true)
+    setAiResult(null)
+    try {
+      const res = await api.post(`/leads/${detailModal.id}/score`)
+      setDetailModal(res.data.lead)
+      setAiResult({ label: res.data.label, reasoning: res.data.reasoning })
+      fetchLeads()
+    } catch {
+      console.error('AI scoring failed')
+    } finally {
+      setAiScoring(false)
+    }
+  }
+
+  const scoreLabelStyle = (label: string) => {
+    if (label === 'Hot') return { icon: Flame, color: 'text-red-500', bg: 'bg-red-50' }
+    if (label === 'Warm') return { icon: Sun, color: 'text-amber-500', bg: 'bg-amber-50' }
+    return { icon: Snowflake, color: 'text-brand-500', bg: 'bg-brand-50' }
   }
 
   const filtered = leads
@@ -180,6 +204,7 @@ export default function Leads({ dark }: { dark: boolean }) {
                   <th className="text-left px-6 py-4">Name</th>
                   <th className="text-left px-6 py-4">Company</th>
                   <th className="text-left px-6 py-4">Budget</th>
+                  <th className="text-left px-6 py-4">Score</th>
                   <th className="text-left px-6 py-4">Status</th>
                   <th className="text-left px-6 py-4">Assigned to</th>
                   <th className="text-left px-6 py-4">Actions</th>
@@ -187,13 +212,20 @@ export default function Leads({ dark }: { dark: boolean }) {
               </thead>
               <tbody>
                 {paginated.map((lead) => (
-                  <tr key={lead.id} onClick={() => setDetailModal(lead)} className={`border-b last:border-0 cursor-pointer ${d ? 'border-ink-800 hover:bg-ink-800' : 'border-ink-50 hover:bg-ink-50'}`}>
+                  <tr key={lead.id} onClick={() => { setDetailModal(lead); setAiResult(null) }} className={`border-b last:border-0 cursor-pointer ${d ? 'border-ink-800 hover:bg-ink-800' : 'border-ink-50 hover:bg-ink-50'}`}>
                     <td className="px-6 py-4">
                       <div className={`text-sm font-semibold ${d ? 'text-white' : 'text-ink-900'}`}>{lead.name}</div>
                       <div className="text-xs text-ink-400">{lead.email}</div>
                     </td>
                     <td className={`px-6 py-4 text-sm ${d ? 'text-ink-300' : 'text-ink-600'}`}>{lead.company || '—'}</td>
                     <td className={`px-6 py-4 text-sm ${d ? 'text-ink-300' : 'text-ink-600'}`}>{lead.budget || '—'}</td>
+                    <td className="px-6 py-4">
+                      {lead.score > 0 ? (
+                        <span className={`text-xs font-semibold font-mono ${d ? 'text-ink-300' : 'text-ink-600'}`}>{lead.score}</span>
+                      ) : (
+                        <span className="text-xs text-ink-400">—</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <select
                         value={lead.status}
@@ -384,11 +416,53 @@ export default function Leads({ dark }: { dark: boolean }) {
               ))}
             </div>
 
-            <div>
+            <div className="mb-4">
               <div className={`text-xs font-semibold mb-1.5 ${d ? 'text-ink-400' : 'text-ink-500'}`}>Message</div>
               <div className={`p-3 rounded-xl text-sm ${d ? 'bg-ink-800 text-ink-200' : 'bg-ink-50 text-ink-700'}`}>
                 {detailModal.message || 'No message provided.'}
               </div>
+            </div>
+
+            {/* AI Scoring Section */}
+            <div className={`p-3 rounded-xl border ${d ? 'border-ink-800 bg-ink-800/50' : 'border-ink-200 bg-ink-50'}`}>
+              {!aiResult && detailModal.score === 0 ? (
+                <button
+                  onClick={handleAiScore}
+                  disabled={aiScoring}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium bg-brand-600 text-white hover:bg-brand-700 transition disabled:opacity-50"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {aiScoring ? 'Analyzing...' : 'Analyze with AI'}
+                </button>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {aiResult && (() => {
+                        const style = scoreLabelStyle(aiResult.label)
+                        return (
+                          <span className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg ${style.bg} ${style.color}`}>
+                            <style.icon className="w-3.5 h-3.5" /> {aiResult.label}
+                          </span>
+                        )
+                      })()}
+                      <span className={`text-xs font-mono font-semibold ${d ? 'text-white' : 'text-ink-900'}`}>
+                        Score: {detailModal.score}/100
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleAiScore}
+                      disabled={aiScoring}
+                      className="text-xs text-brand-600 hover:underline font-medium disabled:opacity-50"
+                    >
+                      {aiScoring ? 'Re-analyzing...' : 'Re-analyze'}
+                    </button>
+                  </div>
+                  {aiResult && (
+                    <div className={`text-xs ${d ? 'text-ink-300' : 'text-ink-600'}`}>{aiResult.reasoning}</div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

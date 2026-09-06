@@ -37,6 +37,11 @@ const createPublicLead = async (req, res, next) => {
       await createNotification(lead.assignedTo.id, `New lead assigned: ${lead.name}`, 'LEAD_ASSIGNED')
     }
 
+    // Auto-score with AI in background (don't block response)
+    scoreLeadWithAI(lead).then(aiResult => {
+      prisma.lead.update({ where: { id: lead.id }, data: { score: aiResult.score } }).catch(console.error)
+    }).catch(console.error)
+
     res.status(201).json({ message: 'Enquiry submitted successfully', lead })
   } catch (err) {
     next(err)
@@ -94,6 +99,11 @@ const createLead = async (req, res, next) => {
     }
 
     await logActivity(req.user.id, `Created a new lead: ${lead.name}`, 'Lead', lead.id)
+
+    // Auto-score with AI in background
+    scoreLeadWithAI(lead).then(aiResult => {
+      prisma.lead.update({ where: { id: lead.id }, data: { score: aiResult.score } }).catch(console.error)
+    }).catch(console.error)
 
     res.status(201).json(lead)
   } catch (err) {
@@ -188,4 +198,5 @@ const scoreLead = async (req, res, next) => {
     next(err)
   }
 }
+
 module.exports = { createPublicLead, getLeads, createLead, updateLeadStatus, assignLead, deleteLead, scoreLead }
