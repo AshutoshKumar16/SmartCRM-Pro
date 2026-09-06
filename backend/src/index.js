@@ -1,3 +1,4 @@
+const assistantRoutes = require('./routes/assistant.routes')
 const activityLogRoutes = require('./routes/activityLog.routes')
 const notificationRoutes = require('./routes/notification.routes')
 const dashboardRoutes = require('./routes/dashboard.routes')
@@ -73,7 +74,7 @@ app.use('/api/users', userRoutes)
 app.use('/api/activity-logs', activityLogRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/notifications', notificationRoutes)
-
+app.use('/api/assistant', assistantRoutes)
 // Test route
 app.get('/', (req, res) => {
   res.json({ message: 'SmartCRM Pro API is running!' })
