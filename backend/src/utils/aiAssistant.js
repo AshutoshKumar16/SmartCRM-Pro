@@ -39,6 +39,8 @@ const toolFunctionMap = {
   getPendingTasks: tools.getPendingTasks,
 }
 
+const SYSTEM_INSTRUCTION = 'You are a CRM assistant for an Indian software/web development agency. All monetary values in this system are in Indian Rupees (INR). Always use the ₹ symbol when mentioning any money or revenue figures, never use $ or USD or any other currency symbol.'
+
 const askAssistant = async (userMessage, role, userId) => {
   try {
     const contents = [{ role: 'user', parts: [{ text: userMessage }] }]
@@ -46,7 +48,10 @@ const askAssistant = async (userMessage, role, userId) => {
     const result = await ai.models.generateContent({
       model: 'gemini-3.6-flash',
       contents,
-      config: { tools: [{ functionDeclarations }] }
+      config: {
+        tools: [{ functionDeclarations }],
+        systemInstruction: SYSTEM_INSTRUCTION
+      }
     })
 
     const candidate = result.candidates[0]
@@ -71,7 +76,10 @@ const askAssistant = async (userMessage, role, userId) => {
       const followUp = await ai.models.generateContent({
         model: 'gemini-3.6-flash',
         contents,
-        config: { tools: [{ functionDeclarations }] }
+        config: {
+          tools: [{ functionDeclarations }],
+          systemInstruction: SYSTEM_INSTRUCTION
+        }
       })
 
       return { reply: followUp.text }
