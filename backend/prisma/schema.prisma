@@ -37,7 +37,6 @@ model Lead {
   phone       String?
   company     String?
   budget      String?
-  message     String?
   source      String     @default("WEBSITE")
   status      LeadStatus @default(NEW)
   score       Int        @default(0)
@@ -47,10 +46,12 @@ model Lead {
   createdById String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  message     String?
 
   customer    Customer?
   tasks       Task[]
   meetings    Meeting[]
+  emailLogs   EmailLog[]
 }
 
 enum LeadStatus {
@@ -181,4 +182,13 @@ model ActivityLog {
   entityId   String?
   metadata   Json?
   createdAt  DateTime @default(now())
+}
+model EmailLog {
+  id        String   @id @default(uuid())
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  leadId    String
+  subject   String
+  body      String
+  sentBy    String
+  sentAt    DateTime @default(now())
 }

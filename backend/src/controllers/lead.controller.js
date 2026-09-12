@@ -1,6 +1,7 @@
+const { generateFollowUpEmail } = require('../utils/aiEmailGenerator')
 const { scoreLeadWithAI } = require('../utils/aiScoring')
 const prisma = require('../config/db')
-const { sendLeadAssignedEmail } = require('../utils/emailService')
+const { sendLeadAssignedEmail, sendCustomEmailToLead } = require('../utils/emailService')
 const { getNextAssignee } = require('../utils/autoAssign')
 const { logActivity } = require('../utils/activityLogger')
 const { createNotification } = require('../utils/notify')
@@ -37,7 +38,6 @@ const createPublicLead = async (req, res, next) => {
       await createNotification(lead.assignedTo.id, `New lead assigned: ${lead.name}`, 'LEAD_ASSIGNED')
     }
 
-    // Auto-score with AI in background (don't block response)
     scoreLeadWithAI(lead).then(aiResult => {
       prisma.lead.update({ where: { id: lead.id }, data: { score: aiResult.score } }).catch(console.error)
     }).catch(console.error)
@@ -74,7 +74,6 @@ const createLead = async (req, res, next) => {
     const { name, email, phone, company, budget, source, assignedToId } = req.body
     if (!name || !email) return res.status(400).json({ message: 'Name and email required' })
 
-    // Agar Admin ne khud koi assignedToId nahi diya, auto-assign kar do
     const finalAssignedToId = assignedToId || await getNextAssignee()
 
     const lead = await prisma.lead.create({
@@ -100,7 +99,6 @@ const createLead = async (req, res, next) => {
 
     await logActivity(req.user.id, `Created a new lead: ${lead.name}`, 'Lead', lead.id)
 
-    // Auto-score with AI in background
     scoreLeadWithAI(lead).then(aiResult => {
       prisma.lead.update({ where: { id: lead.id }, data: { score: aiResult.score } }).catch(console.error)
     }).catch(console.error)
@@ -199,4 +197,74 @@ const scoreLead = async (req, res, next) => {
   }
 }
 
-module.exports = { createPublicLead, getLeads, createLead, updateLeadStatus, assignLead, deleteLead, scoreLead }
+// AI Generate follow-up email (draft only, not sent)
+const generateEmail = async (req, res, next) => {
+  try {
+    const { id } = req.params
+
+    const lead = await prisma.lead.findUnique({ where: { id } })
+    if (!lead) return res.status(404).json({ message: 'Lead not found' })
+
+    const currentUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } })
+
+    const result = await generateFollowUpEmail(lead, currentUser?.name || 'Our Team')
+
+    if (!result.success) {
+      return res.status(500).json({ message: result.error })
+    }
+
+    res.json({ subject: result.subject, body: result.body })
+  } catch (err) {
+    next(err)
+  }
+}
+
+// Send a (possibly edited) email to the lead
+const sendEmailToLead = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const { subject, body } = req.body
+
+    if (!subject || !body) {
+      return res.status(400).json({ message: 'Subject and body are required' })
+    }
+
+    const lead = await prisma.lead.findUnique({ where: { id } })
+    if (!lead) return res.status(404).json({ message: 'Lead not found' })
+
+    const currentUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } })
+
+    await sendCustomEmailToLead(lead, subject, body)
+
+    await prisma.emailLog.create({
+      data: {
+        leadId: lead.id,
+        subject,
+        body,
+        sentBy: currentUser?.name || 'Unknown'
+      }
+    })
+
+    await logActivity(req.user.id, `Sent a follow-up email to ${lead.name}`, 'Lead', lead.id)
+
+    res.json({ message: 'Email sent successfully' })
+  } catch (err) {
+    next(err)
+  }
+}
+// Get email history for a lead
+const getEmailHistory = async (req, res, next) => {
+  try {
+    const { id } = req.params
+
+    const logs = await prisma.emailLog.findMany({
+      where: { leadId: id },
+      orderBy: { sentAt: 'desc' }
+    })
+
+    res.json(logs)
+  } catch (err) {
+    next(err)
+  }
+}
+module.exports = { createPublicLead, getLeads, createLead, updateLeadStatus, assignLead, deleteLead, scoreLead, generateEmail, sendEmailToLead, getEmailHistory }

@@ -101,4 +101,18 @@ const sendLeadAssignedEmail = async (lead, assignedTo) => {
   })
 }
 
-module.exports = { sendEmail, sendMeetingReminder, sendTaskOverdueAlert, sendLeadAssignedEmail }
+const sendCustomEmailToLead = async (lead, subject, body) => {
+  await sendEmail({
+    to: lead.email,
+    subject,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="padding: 24px; background: #ffffff;">
+          <p style="color: #374151; white-space: pre-wrap; line-height: 1.6;">${body}</p>
+        </div>
+      </div>
+    `
+  })
+}
+
+module.exports = { sendEmail, sendMeetingReminder, sendTaskOverdueAlert, sendLeadAssignedEmail, sendCustomEmailToLead }

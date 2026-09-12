@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../../lib/axios'
-import { Search, Plus, X, Users, ChevronLeft, ChevronRight, Sparkles, Flame, Snowflake, Sun } from 'lucide-react'
+import { Search, Plus, X, Users, ChevronLeft, ChevronRight, Sparkles, Flame, Snowflake, Sun, Mail, Send } from 'lucide-react'
 
 interface Lead {
   id: string
@@ -44,6 +44,13 @@ export default function Leads({ dark }: { dark: boolean }) {
   const [converting, setConverting] = useState(false)
   const [aiScoring, setAiScoring] = useState(false)
   const [aiResult, setAiResult] = useState<{ label: string; reasoning: string } | null>(null)
+
+  // Email generator states
+  const [emailGenerating, setEmailGenerating] = useState(false)
+  const [emailDraft, setEmailDraft] = useState<{ subject: string; body: string } | null>(null)
+  const [emailSending, setEmailSending] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const [emailError, setEmailError] = useState('')
 
   const fetchLeads = async () => {
     try {
@@ -121,6 +128,38 @@ export default function Leads({ dark }: { dark: boolean }) {
     }
   }
 
+  const handleGenerateEmail = async () => {
+    if (!detailModal) return
+    setEmailGenerating(true)
+    setEmailError('')
+    setEmailSent(false)
+    try {
+      const res = await api.post(`/leads/${detailModal.id}/generate-email`)
+      setEmailDraft({ subject: res.data.subject, body: res.data.body })
+    } catch {
+      setEmailError('Could not generate email. Please try again.')
+    } finally {
+      setEmailGenerating(false)
+    }
+  }
+
+  const handleSendEmail = async () => {
+    if (!detailModal || !emailDraft) return
+    setEmailSending(true)
+    setEmailError('')
+    try {
+      await api.post(`/leads/${detailModal.id}/send-email`, {
+        subject: emailDraft.subject,
+        body: emailDraft.body
+      })
+      setEmailSent(true)
+    } catch {
+      setEmailError('Could not send email. Please try again.')
+    } finally {
+      setEmailSending(false)
+    }
+  }
+
   const scoreLabelStyle = (label: string) => {
     if (label === 'Hot') return { icon: Flame, color: 'text-red-500', bg: 'bg-red-50' }
     if (label === 'Warm') return { icon: Sun, color: 'text-amber-500', bg: 'bg-amber-50' }
@@ -139,6 +178,14 @@ export default function Leads({ dark }: { dark: boolean }) {
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const d = dark
+
+  const openDetail = (lead: Lead) => {
+    setDetailModal(lead)
+    setAiResult(null)
+    setEmailDraft(null)
+    setEmailSent(false)
+    setEmailError('')
+  }
 
   return (
     <div>
@@ -212,7 +259,7 @@ export default function Leads({ dark }: { dark: boolean }) {
               </thead>
               <tbody>
                 {paginated.map((lead) => (
-                  <tr key={lead.id} onClick={() => { setDetailModal(lead); setAiResult(null) }} className={`border-b last:border-0 cursor-pointer ${d ? 'border-ink-800 hover:bg-ink-800' : 'border-ink-50 hover:bg-ink-50'}`}>
+                  <tr key={lead.id} onClick={() => openDetail(lead)} className={`border-b last:border-0 cursor-pointer ${d ? 'border-ink-800 hover:bg-ink-800' : 'border-ink-50 hover:bg-ink-50'}`}>
                     <td className="px-6 py-4">
                       <div className={`text-sm font-semibold ${d ? 'text-white' : 'text-ink-900'}`}>{lead.name}</div>
                       <div className="text-xs text-ink-400">{lead.email}</div>
@@ -391,8 +438,8 @@ export default function Leads({ dark }: { dark: boolean }) {
 
       {/* Detail Modal */}
       {detailModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDetailModal(null)}>
-          <div onClick={(e) => e.stopPropagation()} className={`w-full max-w-md rounded-2xl p-6 shadow-xl ${d ? 'bg-ink-900' : 'bg-white'}`}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto py-8" onClick={() => setDetailModal(null)}>
+          <div onClick={(e) => e.stopPropagation()} className={`w-full max-w-md rounded-2xl p-6 shadow-xl my-auto ${d ? 'bg-ink-900' : 'bg-white'}`}>
             <div className="flex items-center justify-between mb-5">
               <h2 className={`text-lg font-bold ${d ? 'text-white' : 'text-ink-900'}`}>{detailModal.name}</h2>
               <button onClick={() => setDetailModal(null)} className="text-ink-400 hover:text-ink-600">
@@ -424,7 +471,7 @@ export default function Leads({ dark }: { dark: boolean }) {
             </div>
 
             {/* AI Scoring Section */}
-            <div className={`p-3 rounded-xl border ${d ? 'border-ink-800 bg-ink-800/50' : 'border-ink-200 bg-ink-50'}`}>
+            <div className={`p-3 rounded-xl border mb-4 ${d ? 'border-ink-800 bg-ink-800/50' : 'border-ink-200 bg-ink-50'}`}>
               {!aiResult && detailModal.score === 0 ? (
                 <button
                   onClick={handleAiScore}
@@ -463,6 +510,67 @@ export default function Leads({ dark }: { dark: boolean }) {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* AI Email Generator Section */}
+            <div className={`p-3 rounded-xl border ${d ? 'border-ink-800 bg-ink-800/50' : 'border-ink-200 bg-ink-50'}`}>
+              {!emailDraft ? (
+                <button
+                  onClick={handleGenerateEmail}
+                  disabled={emailGenerating}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium bg-brand-600 text-white hover:bg-brand-700 transition disabled:opacity-50"
+                >
+                  <Mail className="w-4 h-4" />
+                  {emailGenerating ? 'Drafting email...' : 'Generate Follow-up Email'}
+                </button>
+              ) : (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-semibold ${d ? 'text-ink-300' : 'text-ink-600'}`}>Email draft — edit before sending</span>
+                    <button
+                      onClick={handleGenerateEmail}
+                      disabled={emailGenerating}
+                      className="text-xs text-brand-600 hover:underline font-medium disabled:opacity-50"
+                    >
+                      {emailGenerating ? 'Regenerating...' : 'Regenerate'}
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className={`text-[10px] uppercase tracking-wide font-semibold block mb-1 ${d ? 'text-ink-500' : 'text-ink-400'}`}>Subject</label>
+                    <input
+                      type="text"
+                      value={emailDraft.subject}
+                      onChange={(e) => setEmailDraft({ ...emailDraft, subject: e.target.value })}
+                      className={`w-full px-3 py-2 rounded-lg text-sm border outline-none focus:border-brand-500 ${d ? 'bg-ink-800 border-ink-700 text-white' : 'bg-white border-ink-200 text-ink-900'}`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`text-[10px] uppercase tracking-wide font-semibold block mb-1 ${d ? 'text-ink-500' : 'text-ink-400'}`}>Body</label>
+                    <textarea
+                      value={emailDraft.body}
+                      onChange={(e) => setEmailDraft({ ...emailDraft, body: e.target.value })}
+                      rows={8}
+                      className={`w-full px-3 py-2 rounded-lg text-sm border outline-none resize-none focus:border-brand-500 ${d ? 'bg-ink-800 border-ink-700 text-white' : 'bg-white border-ink-200 text-ink-900'}`}
+                    />
+                  </div>
+
+                  {emailSent ? (
+                    <div className="text-xs text-success-500 font-medium text-center py-1.5">✓ Email sent to {detailModal.email}</div>
+                  ) : (
+                    <button
+                      onClick={handleSendEmail}
+                      disabled={emailSending}
+                      className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium bg-success-500 text-white hover:opacity-90 transition disabled:opacity-50"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      {emailSending ? 'Sending...' : `Send to ${detailModal.email}`}
+                    </button>
+                  )}
+                </div>
+              )}
+              {emailError && <div className="text-xs text-red-500 mt-2">{emailError}</div>}
             </div>
           </div>
         </div>
